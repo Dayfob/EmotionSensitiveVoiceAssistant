@@ -8,7 +8,7 @@ set: 1
 aside: 1
 hour: 2
 half: 2
-get: 4
+get: 5
 ready: 1
 morning: 3
 every: 3
@@ -18,9 +18,8 @@ head: 1
 straight: 2
 shower: 2
 second: 1
-wash: 2
+wash: 3
 hair: 8
-washing: 1
 frequently: 1
 need: 1
 twice: 1
@@ -40,7 +39,7 @@ afterwards: 1
 often: 1
 pot: 1
 coffee: 1
-dressed: 3
+dress: 3
 wait: 1
 brew: 1
 time: 4
@@ -48,7 +47,6 @@ remember: 1
 choose: 1
 outfit: 1
 night: 1
-getting: 1
 semi: 1
 dry: 1
 style: 1
@@ -59,7 +57,7 @@ regularly: 1
 flat: 1
 iron: 1
 keep: 1
-freezing: 1
+freeze: 1
 another: 1
 daily: 1
 makeup: 1
