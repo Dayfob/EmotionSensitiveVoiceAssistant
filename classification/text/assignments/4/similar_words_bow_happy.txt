@@ -1,0 +1,26 @@
+Words most similar to 'happy':
+thankful: 0.6261
+birthday: 0.6186
+holiday: 0.6133
+cheer: 0.6031
+thanksgiving: 0.5880
+bless: 0.5746
+excite: 0.5571
+friends: 0.5504
+busy: 0.5363
+wonderful: 0.5347
+invigorated: 0.5341
+lovely: 0.5316
+joy: 0.5316
+stress: 0.5315
+pleasant: 0.5294
+thebodyshopuk: 0.5283
+abruptly: 0.5261
+sick: 0.5205
+sweet: 0.5193
+dinner: 0.5095
+hope: 0.5093
+comfortable: 0.5039
+excellent: 0.4995
+celebrate: 0.4974
+present: 0.4961
