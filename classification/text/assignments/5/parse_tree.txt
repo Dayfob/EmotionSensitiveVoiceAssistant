@@ -1,0 +1,5 @@
+(S
+  (NP (PRP i))
+  (VP (V am) (Adv really) (Adj bad))
+  (Conj but)
+  (S (NP (PRP it)) (VP (V is) (NP (Det a) (Adj good) (N time)))))
