@@ -2,9 +2,9 @@ import os
 from faster_whisper import WhisperModel
 from speech.model import *
 
-audio_path = "../data/speech/3.mp3"
+# audio_path = "../data/speech/3.mp3"
 # audio_path = "../data/speech/7.mp3"
-# audio_path = "../data/speech/9.mp3"
+audio_path = "../data/speech/9.mp3"
 # audio_path = "../data/speech/12.mp3"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -42,11 +42,6 @@ def load_audio_segments(file_path, sample_rate, duration):
     return segments
 
 
-# # Load the model (assuming model1 and model2 are already defined and loaded)
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model1.to(device)
-# model2.to(device)
-
 # Load audio file and split into segments
 file_path = audio_path  # Replace with your file path
 audio_segments = load_audio_segments(file_path, SAMPLE_RATE, DURATION)
@@ -78,7 +73,6 @@ for i, segment in enumerate(audio_segments):
 
     # Print or save the results for this segment
     print(f"Time: {i} - {i + 1} sec, Emotion: {emotion}, Probabilities: {avg_probabilities.cpu().numpy()}")
-
 
 # Text preprocessing ========================================================================================
 from collections import defaultdict
@@ -133,91 +127,84 @@ def clean_text(text):
     # Return cleaned words as a single string
     return ' '.join(words)
 
+
 # Text emotion classification ===================================================================================
 
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 
 # Load the tokenizer and model
-tokenizer = BertTokenizer.from_pretrained('text/outputs/tokenizer_2')
-textClassificator = BertForSequenceClassification.from_pretrained('text/outputs/bert_full_model_2', num_labels=7)
-# model.load_state_dict(torch.load('bert_model_2.pth', map_location=torch.device('cpu')))
+tokenizer = BertTokenizer.from_pretrained('text/outputs/tokenizer_3')
+textClassificator = BertForSequenceClassification.from_pretrained('text/outputs/bert_full_model_3', num_labels=7)
 textClassificator.eval()  # Set the model to evaluation mode
 
 # List of emotions
-emotions = ["angry", "disgust", "fear", "happy", "neutral", "sad", "surprised"]
-MAX_LEN = 64
+emotion_to_idx = {
+    'happy': 0,
+    'surprised': 1,
+    'neutral': 2,
+    'sad': 3,
+    'fear': 4,
+    'angry': 5,
+    'disgust': 6
+}
+idx_to_emotion = {idx: emotion for emotion, idx in emotion_to_idx.items()}
+MAX_LEN = 128
+
 
 def classify_text(text):
     # Tokenize and prepare input
     inputs = tokenizer(
         text,
-        # return_tensors="pt", truncation=True, padding=True,
-                       add_special_tokens=True,
-                       max_length=MAX_LEN,
-                       return_token_type_ids=False,
-                       padding='max_length',
-                       truncation=True,
-                       return_attention_mask=True,
-                       return_tensors='pt',
-                       )
-
-    print("Inputs: ", inputs)
-
+        add_special_tokens=True,
+        max_length=MAX_LEN,
+        return_token_type_ids=False,
+        padding='max_length',
+        truncation=True,
+        return_attention_mask=True,
+        return_tensors='pt',
+    )
 
     # Get predictions
     with torch.no_grad():
         outputs = textClassificator(**inputs)
-        probabilities = torch.nn.functional.softmax(outputs.logits, dim=1)
-        # probabilities = torch.sigmoid(outputs.logits)
+        # probabilities = torch.nn.functional.softmax(outputs.logits, dim=1)
+        probabilities = torch.sigmoid(outputs.logits)
 
-    print("Logits??:", outputs)
-    # Logits: tensor([[ -37.9633,   -6.7012,  -13.4319,  -39.3405,   -5.2107,  -28.2893, -137.3368]])
-
-    # Get the emotion with the highest probability
-    predicted_emotion_index = torch.argmax(probabilities, dim=1).item()
-    predicted_emotion = emotions[predicted_emotion_index]
+    # Get the predicted labels
     emotion_probabilities = probabilities.flatten().tolist()
+    max_prob = max(emotion_probabilities)
+    max_idx = emotion_probabilities.index(max_prob)
+    predicted_emotion = idx_to_emotion[max_idx]
 
     print(f"Text: {text}")
-    print(f"Predicted Emotion: {predicted_emotion}")
+    print(f"Predicted Emotion: {predicted_emotion} ({max_prob:.2f})")
     print("Probabilities for each emotion:")
-    for emotion, prob in zip(emotions, emotion_probabilities):
+    for emotion, prob in zip(emotion_to_idx.keys(), emotion_probabilities):
         print(f"{emotion}: {prob:.2f}")
 
     return predicted_emotion, emotion_probabilities
-
-
-# Example usage
-# text = "I'm feeling fantastic today!"
-# classify_text(text)
 
 
 # Speech to text ===================================================================================================
 
 model_size = "medium.en"
 
-# Run on GPU with FP16
+# GPU with FP16
 whisper = WhisperModel(model_size, device="cpu", compute_type="int8")
-
-# or run on GPU with INT8
-# model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
-# or run on CPU with INT8
-# model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
 segments, info = whisper.transcribe(audio_path, beam_size=5)
 
 print("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
-# for segment in segments:
-#     print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-#     text = clean_text(segment.text)
-#     classify_text(text)
+for segment in segments:
+    print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
+    text = clean_text(segment.text)
+    classify_text(text)
 
-
-text = "work computer tech ability hyper focus one issue real asset however living day day get bogged feel frustrate not make progress focus one problem"
-# text = "I am so happy. Really really happy"
-# text = "I am so sad. Really really sad"
-print(text)
-text = clean_text(text)
-classify_text(text)
+# text = "work computer tech ability hyper focus one issue real asset however living day day get bogged feel frustrate not make progress focus one problem"
+# # text = "I am so happy. Really really happy"
+# # text = "I am so sad. Really really sad"
+# print(text)
+# text = clean_text(text)
+# classify_text(text)
