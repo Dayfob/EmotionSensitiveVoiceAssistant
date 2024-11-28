@@ -17,7 +17,7 @@ from transformers import BertTokenizer, BertForSequenceClassification
 import time
 from gpt4all import GPT4All
 import os
-
+import pyttsx3
 
 class CNN_1(nn.Module):
     def __init__(self, n=32):
@@ -417,6 +417,13 @@ MAX_LEN = 128
 
 chat_bot = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf", model_path="chatbot/", device="gpu")
 
+# SPEAKER =======================================================================================================
+
+engine = pyttsx3.init()
+engine.setProperty('voice', engine.getProperty('voices')[1].id)
+engine.setProperty('rate', 150)  # Speed (words per minute)
+engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
+
 # Infinite loop for recording and classification
 if __name__ == "__main__":
     os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -458,5 +465,8 @@ if __name__ == "__main__":
 
             speech_emotion = output_emotions[emotion_counter_speech.index(max(emotion_counter_speech))]
             text_emotion = output_emotions[emotion_counter_text.index(max(emotion_counter_text))]
-            print(chat_bot.generate(f"(Result of user emotion classification: {speech_emotion, text_emotion}) \n "
-                                    f"User request: {user_request}", max_tokens=128))
+            output = chat_bot.generate(f"(Result of user emotion classification: {speech_emotion, text_emotion}) \n "
+                                    f"User request: {user_request}", max_tokens=128)
+            print(output)
+            engine.say(output)
+            engine.runAndWait()
