@@ -15,6 +15,8 @@ from nltk import pos_tag
 from autocorrect import Speller
 from transformers import BertTokenizer, BertForSequenceClassification
 import time
+from gpt4all import GPT4All
+import os
 
 
 class CNN_1(nn.Module):
@@ -411,52 +413,50 @@ emotion_to_idx = {
 idx_to_emotion = {idx: emotion for emotion, idx in emotion_to_idx.items()}
 MAX_LEN = 128
 
+# CHAT BOT =======================================================================================================
+
+chat_bot = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf", model_path="chatbot/", device="gpu")
+
 # Infinite loop for recording and classification
 if __name__ == "__main__":
-    while True:
-        emotion_counter_speech = {
-            'happy': 0,
-            'surprised': 0,
-            'neutral': 0,
-            'sad': 0,
-            'fear': 0,
-            'angry': 0,
-            'disgust': 0
-        }
-        emotion_counter_text = {
-            'happy': 0,
-            'surprised': 0,
-            'neutral': 0,
-            'sad': 0,
-            'fear': 0,
-            'angry': 0,
-            'disgust': 0
-        }
-        user_input = input("Type # of seconds to record audio, or type 'q' to quit: ")
-        if user_input.lower() == 'q':
-            print("Exiting...")
-            break
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+    with chat_bot.chat_session():
+        while True:
+            output_emotions = ["happy", "surprised", "neutral", "sad", "fear", "angry", "disgust"]
+            emotion_counter_speech = [0, 0, 0, 0, 0, 0, 0]
+            emotion_counter_text = [0, 0, 0, 0, 0, 0, 0]
+            user_request = ""
 
-        audio_data = record_audio(SAMPLE_RATE, user_input)
+            user_input = input("Type # of seconds to record audio, or type 'q' to quit: ")
+            if user_input.lower() == 'q':
+                print("Exiting...")
+                break
 
-        recorded_duration = len(audio_data) / SAMPLE_RATE
-        print(f"Recorded audio length: {recorded_duration:.2f} seconds")
+            audio_data = record_audio(SAMPLE_RATE, int(user_input))
 
-        # audio_data = audio_data.astype(np.float32) / 32768.0
-        audio_data = audio_data.astype(np.float32)
-        segments = split_audio_into_segments(audio_data, SAMPLE_RATE, DURATION)
+            recorded_duration = len(audio_data) / SAMPLE_RATE
+            print(f"Recorded audio length: {recorded_duration:.2f} seconds")
 
-        for i, segment in enumerate(segments):
-            emotion, probabilities = classify_audio_segment(segment, SAMPLE_RATE)
-            print(f"Segment {i + 1} - Detected Emotion: {emotion}")
-            # print(f"Probabilities: {probabilities}")
+            audio_data = audio_data.astype(np.float32)
+            segments = split_audio_into_segments(audio_data, SAMPLE_RATE, DURATION)
 
+            for i, segment in enumerate(segments):
+                predicted_emotion, probabilities = classify_audio_segment(segment, SAMPLE_RATE)
+                print(f"Segment {i + 1} - Detected Emotion: {predicted_emotion}")
+                # print(f"Probabilities: {probabilities}")
+                emotion_counter_speech[emotion_to_idx[predicted_emotion]] += 1
 
-        # audio_data_whisper = librosa.resample(audio_data, orig_sr=SAMPLE_RATE, target_sr=SAMPLE_RATE_WHISPER)
-        # whisperSegments, _ = whisper.transcribe(audio_data_whisper, beam_size=5)
-        whisperSegments, _ = whisper.transcribe(audio_data / 32768.0, beam_size=5)
+            whisperSegments, _ = whisper.transcribe(audio_data / 32768.0, beam_size=5)
 
-        for segment in whisperSegments:
-            print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-            text = clean_text(segment.text)
-            predicted_emotion, emotion_probabilities = classify_text(text)
+            for segment in whisperSegments:
+                print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
+                text = clean_text(segment.text)
+                predicted_emotion, emotion_probabilities = classify_text(text)
+                user_request += segment.text
+                emotion_counter_text[emotion_to_idx[predicted_emotion]] += 1
+
+            speech_emotion = output_emotions[emotion_counter_speech.index(max(emotion_counter_speech))]
+            text_emotion = output_emotions[emotion_counter_text.index(max(emotion_counter_text))]
+            print(chat_bot.generate(f"(Result of user emotion classification: {speech_emotion, text_emotion}) \n "
+                                    f"User request: {user_request}", max_tokens=128))
